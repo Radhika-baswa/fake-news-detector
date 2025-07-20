@@ -1,6 +1,5 @@
 # model.py
 import pandas as pd
-from datasets import load_dataset
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -11,32 +10,20 @@ import os
 # Create a data folder if not exists
 os.makedirs("data", exist_ok=True)
 
-# Load LIAR dataset from Hugging Face
-print("🔄 Loading 'liar' dataset...")
-dataset = load_dataset("liar")
+# Load your combined fake and real news dataset
+fake_df = pd.read_csv("Fake.csv")
+true_df = pd.read_csv("True.csv")
 
-# Extract relevant data from training set
-train_df = pd.DataFrame(dataset["train"])
-val_df = pd.DataFrame(dataset["validation"])
-test_df = pd.DataFrame(dataset["test"])
+# Add labels: 0 = fake, 1 = real
+fake_df["label"] = 0
+true_df["label"] = 1
 
-# Combine train/val for training, use test set for final evaluation
-combined_df = pd.concat([train_df, val_df])
-X = combined_df["statement"].fillna("")
-y = combined_df["label"]
+# Combine datasets
+df = pd.concat([fake_df, true_df]).sample(frac=1, random_state=42)  # shuffle
 
-# Map multi-class labels to binary: 0 = fake, 1 = real
-# fake = ['false', 'pants-fire', 'barely-true'] -> 0
-# real = ['half-true', 'mostly-true', 'true'] -> 1
-label_map = {
-    0: 0,  # pants-fire
-    1: 0,  # false
-    2: 0,  # barely-true
-    3: 1,  # half-true
-    4: 1,  # mostly-true
-    5: 1   # true
-}
-y = y.map(label_map)
+# Use only the title/text column (you can choose one or merge both)
+X = df["title"].fillna("")  # or use df["text"] or df["title"] + " " + df["text"]
+y = df["label"]
 
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
